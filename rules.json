@@ -3,20 +3,31 @@
   "max_agents": 200,
   "global_rules": [
     "1. يجب تسجيل كافة الأنشطة والنتائج داخل memory.json تلقائياً.",
-    "2. لا يحق لأي وكيل تعديل rules.json إلا بموافقة الحاكم التنفيذي (Governor)."
+    "2. لا يحق لأي وكيل تعديل rules.json إلا بموافقة الحاكم التنفيذي (Governor).",
+    "تلقائي: استقرار النظام مثبت، يُسمح بتوسيع نطاق السرب وزيادة الفحوصات."
   ],
   "roles": {
     "governor": {
       "title": "الحاكم التنفيذي 🏛️",
-      "permissions": ["manage_agents", "approve_rules", "assign_tasks"]
+      "permissions": [
+        "manage_agents",
+        "approve_rules",
+        "assign_tasks"
+      ]
     },
     "auditor": {
       "title": "وكيل الفحص 🧪",
-      "permissions": ["run_tests", "log_errors"]
+      "permissions": [
+        "run_tests",
+        "log_errors"
+      ]
     },
     "worker": {
       "title": "وكيل التنفيذ 🛠️",
-      "permissions": ["write_code", "read_memory"]
+      "permissions": [
+        "write_code",
+        "read_memory"
+      ]
     }
   }
 }
