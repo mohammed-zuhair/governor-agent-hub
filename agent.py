@@ -96,8 +96,12 @@ if __name__ == "__main__":
     for file_path in html_files:
         errors = asyncio.run(audit_page(file_path))
         if errors:
-            all_errors[file_path] = errors
-            total_errors_count += len(errors)
+    screenshot_path = f"error_{os.path.basename(file_path)}.png"
+    await page.screenshot(path=screenshot_path)
+    all_errors[file_path] = {
+        "details": errors,
+        "screenshot": screenshot_path
+    }
 
     is_success = total_errors_count == 0
     
