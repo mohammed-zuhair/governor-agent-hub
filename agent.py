@@ -29,4 +29,7 @@ async def audit_page(file_path):
 
 if __name__ == "__main__":
     print("🤖 محرك Playwright Audit يعمل الآن...")
-  
+    # تشغيل الفحص التلقائي على الصفحة الرئيسية 🌐
+    success = asyncio.run(audit_page("index.html"))
+    if not success:
+        exit(1)  # إيقاف التمرير في حال وجود خطأ 🚨
