@@ -1,6 +1,6 @@
 {
-  "last_run": "2026-11-24T20:23:40.749457",
-  "total_audits": 5,
+  "last_run": "2026-11-24T20:58:41.173649",
+  "total_audits": 6,
   "history": [
     {
       "timestamp": "2026-11-24T18:56:05.507037",
@@ -36,6 +36,20 @@
         "index.html"
       ],
       "errors": {},
+      "governor_approval": true
+    },
+    {
+      "timestamp": "2026-11-24T20:58:41.173649",
+      "status": "FAIL",
+      "audited_files": [
+        "dashboard.html",
+        "index.html"
+      ],
+      "errors": {
+        "dashboard.html": [
+          "خطأ تجريبي لاختبار استجابة السرب!"
+        ]
+      },
       "governor_approval": true
     }
   ],
