@@ -60,6 +60,7 @@ def evaluate_and_evolve_rules(memory, rules):
 async def audit_page(file_path):
     print(f"🧪 [وكيل الفحص] بدء فحص الملف: {file_path}")
     errors = []
+    screenshot_path = None
     
     async with async_playwright() as p:
         browser = await p.chromium.launch(headless=True)
@@ -72,9 +73,15 @@ async def audit_page(file_path):
         await page.goto(f"file://{full_path}")
         await page.wait_for_timeout(1000)
         
+        # 📸 الفحص الوقائي: التقاط صورة عند رصد أخطاء
+        if errors:
+            screenshot_path = f"error_{os.path.basename(file_path)}.png"
+            await page.screenshot(path=screenshot_path)
+            print(f"📸 تم التقاط صورة تشخيصية: {screenshot_path}")
+        
         await browser.close()
         
-    return errors
+    return errors, screenshot_path
 
 if __name__ == "__main__":
     print("🏛️ تشغيل الحاكم التنفيذي (Executive Governor)...")
@@ -92,16 +99,16 @@ if __name__ == "__main__":
     
     all_errors = {}
     total_errors_count = 0
-
+    
     for file_path in html_files:
-        errors = asyncio.run(audit_page(file_path))
+        errors, screenshot = asyncio.run(audit_page(file_path))
         if errors:
-            screenshot_path = f"error_{os.path.basename(file_path)}.png"
-            await page.screenshot(path=screenshot_path)
             all_errors[file_path] = {
                 "details": errors,
-                "screenshot": screenshot_path
+                "screenshot": screenshot
             }
+            total_errors_count += len(errors)
+
     is_success = total_errors_count == 0
     
     # 3. تحديث سجلات الذاكرة 📊
@@ -121,13 +128,9 @@ if __name__ == "__main__":
         save_rules(rules)
         print("💾 تم حفظ القواعد الجديدة في rules.json!")
     
-        # 5. حفظ الذاكرة المحدثة 💾
+    # 5. حفظ الذاكرة المحدثة 💾
     save_memory(memory)
     
     if is_success:
-        print(f"✅ الفحص التوسعي اكتمل بنجاح تحت إشراف الحاكم! إجمالي الفحوصات: {memory['total_audits']}")
-    else:
-        print(f"⚠️ تم رصد أخطاء وتسجيلها في الذاكرة وسَنّ قوانين وقائية: {all_errors}")
-
-
-    
+        print(f"✅
+        
