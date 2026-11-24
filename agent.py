@@ -22,7 +22,7 @@ def load_rules():
     if os.path.exists(RULES_FILE):
         with open(RULES_FILE, "r", encoding="utf-8") as f:
             return json.load(f)
-    return {}
+    return {"global_rules": [], "pattern_rules": []}
 
 def save_rules(data):
     with open(RULES_FILE, "w", encoding="utf-8") as f:
@@ -56,6 +56,42 @@ def evaluate_and_evolve_rules(memory, rules):
 
     rules["global_rules"] = global_rules
     return rules, updated
+
+def update_rules_engine(memory_data, rules_data):
+    """📜 محرك القواعد النمطية: يحلل التكرار ويضيف القواعد النمطية مع الحفاظ على القواعد العامة"""
+    history = memory_data.get("history", [])
+    error_counts = {}
+
+    # 📊 إحصاء تكرار الأنماط عبر السجل التاريخي
+    for run in history:
+        if run.get("status") == "FAIL":
+            for file_path, details in run.get("errors", {}).items():
+                err_type = "console_error" if "console_error" in str(details) else "general_error"
+                error_counts[err_type] = error_counts.get(err_type, 0) + 1
+
+    pattern_rules = rules_data.get("pattern_rules", [])
+    updated = False
+
+    # 📜 صياغة القواعد النمطية عند التكرار (مرتين فأكثر)
+    for err_type, count in error_counts.items():
+        if count >= 2:
+            existing = next((r for r in pattern_rules if r.get("error_type") == err_type), None)
+            if not existing:
+                pattern_rules.append({
+                    "error_type": err_type,
+                    "preventative_action": "comment_out",
+                    "created_at": datetime.now().strftime("%Y-%m-%d"),
+                    "occurrence_count": count
+                })
+                updated = True
+                print(f"📜 [Governor] تم تسجيل قاعدة نمطية جديدة للخطأ: {err_type}")
+            else:
+                if existing.get("occurrence_count") != count:
+                    existing["occurrence_count"] = count
+                    updated = True
+
+    rules_data["pattern_rules"] = pattern_rules
+    return rules_data, updated
 
 async def audit_page(file_path):
     print(f"🧪 [وكيل الفحص] بدء فحص الملف: {file_path}")
@@ -91,7 +127,7 @@ if __name__ == "__main__":
     memory = load_memory()
     
     global_rules = rules.get("global_rules", [])
-    print(f"📜 تم تحميل {len(global_rules)} قوانين من rules.json")
+    print(f"📜 تم تحميل {len(global_rules)} قوانين عامة من rules.json")
     
     # 2. اكتشاف جميع صفحات HTML وتكليف الوكلاء بفحصها 📂🐝
     html_files = glob.glob("**/*.html", recursive=True)
@@ -122,18 +158,21 @@ if __name__ == "__main__":
         "governor_approval": True
     })
     
-    # 4. تفعيل التطور الذاتي للقوانين 🔄
+    # 4. تفعيل التطور الذاتي للقوانين العامة 🔄
     rules, rules_updated = evaluate_and_evolve_rules(memory, rules)
-    if rules_updated:
-        save_rules(rules)
-        print("💾 تم حفظ القواعد الجديدة في rules.json!")
     
-    # 5. حفظ الذاكرة المحدثة 💾
+    # 5. تفعيل محرك الأنماط المتكررة 📜
+    rules, pattern_updated = update_rules_engine(memory, rules)
+    
+    if rules_updated or pattern_updated:
+        save_rules(rules)
+        print("💾 تم حفظ القواعد المحدثة (العامة والنمطية) في rules.json!")
+    
+    # 6. حفظ الذاكرة المحدثة 💾
     save_memory(memory)
     
     if is_success:
         print(f"✅ الفحص التوسعي اكتمل بنجاح تحت إشراف الحاكم! إجمالي الفحوصات: {memory['total_audits']}")
     else:
         print(f"⚠️ تم رصد أخطاء وتسجيلها في الذاكرة وسَنّ قوانين وقائية: {all_errors}")
-        
         
