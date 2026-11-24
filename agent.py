@@ -131,6 +131,9 @@ if __name__ == "__main__":
     # 5. حفظ الذاكرة المحدثة 💾
     save_memory(memory)
     
-    if is_success:
-        print(f"✅
+        if is_success:
+        print(f"✅ الفحص التوسعي اكتمل بنجاح تحت إشراف الحاكم! إجمالي الفحوصات: {memory['total_audits']}")
+    else:
+        print(f"⚠️ تم رصد أخطاء وتسجيلها في الذاكرة وسَنّ قوانين وقائية: {all_errors}")
+        
         
