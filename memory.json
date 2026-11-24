@@ -1,11 +1,17 @@
 {
-  "last_run": "2026-11-24T18:56:05.507037",
-  "total_audits": 1,
+  "last_run": "2026-11-24T19:17:11.273129",
+  "total_audits": 2,
   "history": [
     {
       "timestamp": "2026-11-24T18:56:05.507037",
       "status": "PASS",
       "errors": []
+    },
+    {
+      "timestamp": "2026-11-24T19:17:11.273129",
+      "status": "PASS",
+      "errors": [],
+      "governor_approval": true
     }
   ],
   "known_issues": []
