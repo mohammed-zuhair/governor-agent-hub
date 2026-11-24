@@ -1,6 +1,6 @@
 {
-  "last_run": "2026-11-24T20:58:41.173649",
-  "total_audits": 6,
+  "last_run": "2026-11-24T21:39:56.113818",
+  "total_audits": 7,
   "history": [
     {
       "timestamp": "2026-11-24T18:56:05.507037",
@@ -49,6 +49,23 @@
         "dashboard.html": [
           "خطأ تجريبي لاختبار استجابة السرب!"
         ]
+      },
+      "governor_approval": true
+    },
+    {
+      "timestamp": "2026-11-24T21:39:56.113818",
+      "status": "FAIL",
+      "audited_files": [
+        "dashboard.html",
+        "index.html"
+      ],
+      "errors": {
+        "dashboard.html": {
+          "details": [
+            "خطأ تجريبي لاختبار استجابة السرب!"
+          ],
+          "screenshot": "error_dashboard.html.png"
+        }
       },
       "governor_approval": true
     }
