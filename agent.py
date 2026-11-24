@@ -1,5 +1,6 @@
 import os
 import json
+import glob
 import asyncio
 from datetime import datetime
 from playwright.async_api import async_playwright
@@ -57,7 +58,7 @@ def evaluate_and_evolve_rules(memory, rules):
     return rules, updated
 
 async def audit_page(file_path):
-    print(f"🧪 بدء فحص الملف: {file_path}")
+    print(f"🧪 [وكيل الفحص] بدء فحص الملف: {file_path}")
     errors = []
     
     async with async_playwright() as p:
@@ -85,9 +86,20 @@ if __name__ == "__main__":
     global_rules = rules.get("global_rules", [])
     print(f"📜 تم تحميل {len(global_rules)} قوانين من rules.json")
     
-    # 2. تشغيل الفحص 🧪
-    errors = asyncio.run(audit_page("index.html"))
-    is_success = len(errors) == 0
+    # 2. اكتشاف جميع صفحات HTML وتكليف الوكلاء بفحصها 📂🐝
+    html_files = glob.glob("**/*.html", recursive=True)
+    print(f"🔎 تم اكتشاف {len(html_files)} ملفات HTML لفحصها بواسطة السرب.")
+    
+    all_errors = {}
+    total_errors_count = 0
+    
+    for file_path in html_files:
+        errors = asyncio.run(audit_page(file_path))
+        if errors:
+            all_errors[file_path] = errors
+            total_errors_count += len(errors)
+
+    is_success = total_errors_count == 0
     
     # 3. تحديث سجلات الذاكرة 📊
     memory["total_audits"] += 1
@@ -95,7 +107,8 @@ if __name__ == "__main__":
     memory["history"].append({
         "timestamp": memory["last_run"],
         "status": "PASS" if is_success else "FAIL",
-        "errors": errors,
+        "audited_files": html_files,
+        "errors": all_errors,
         "governor_approval": True
     })
     
@@ -109,8 +122,8 @@ if __name__ == "__main__":
     save_memory(memory)
     
     if is_success:
-        print(f"✅ الفحص اكتمل بنجاح تحت إشراف الحاكم! إجمالي الفحوصات: {memory['total_audits']}")
+        print(f"✅ الفحص التوسعي اكتمل بنجاح تحت إشراف الحاكم! إجمالي الفحوصات: {memory['total_audits']}")
     else:
-        print(f"❌ تم اكتشاف أخطاء: {errors}")
+        print(f"❌ تم اكتشاف أخطاء في بعض الملفات: {all_errors}")
         exit(1)
         
