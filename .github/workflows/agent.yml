@@ -17,8 +17,8 @@ jobs:
       - name: Setup Python 🐍
         uses: actions/setup-python@v4
         with:
-          python-version: '3.x'
-          cache: 'pip'
+          python-version: "3.x"
+          cache: "pip"
 
       - name: Install Dependencies 📦
         run: |
@@ -26,14 +26,17 @@ jobs:
           pip install -r requirements.txt
           playwright install --with-deps chromium
 
-      - name: Run Agent Audit 🤖
+      - name: Run Agent Audit 🧪
         run: python agent.py
 
-      - name: Commit and Push Memory Update 🧠
+      - name: Run Worker Repair 🛠️
+        run: python worker.py
+
+      - name: Commit and Push Memory Update 💾
         run: |
           git config --local user.email "action@github.com"
           git config --local user.name "GitHub Action Bot"
-          git add memory.json rules.json
-          git commit -m "Update agent memory [skip ci]" || exit 0
+          git add .
+          git commit -m "Update agent memory and auto-fix code [skip ci]" || exit 0
           git push
           
