@@ -4,122 +4,78 @@ import glob
 import asyncio
 from datetime import datetime
 from playwright.async_api import async_playwright
+from ai_engine import call_ai
 
 MEMORY_FILE = "memory.json"
 RULES_FILE = "rules.json"
 REPORT_FILE = "summary_report.md"
 
-def load_memory():
-    if os.path.exists(MEMORY_FILE):
-        with open(MEMORY_FILE, "r", encoding="utf-8") as f:
-            return json.load(f)
-    return {"last_run": None, "total_audits": 0, "history": [], "known_issues": []}
+def load_json(filepath, default):
+    if os.path.exists(filepath):
+        try:
+            with open(filepath, "r", encoding="utf-8") as f:
+                return json.load(f)
+        except Exception:
+            return default
+    return default
 
-def save_memory(data):
-    with open(MEMORY_FILE, "w", encoding="utf-8") as f:
+def save_json(filepath, data):
+    with open(filepath, "w", encoding="utf-8") as f:
         json.dump(data, f, ensure_ascii=False, indent=2)
 
-def load_rules():
-    if os.path.exists(RULES_FILE):
-        with open(RULES_FILE, "r", encoding="utf-8") as f:
-            return json.load(f)
-    return {"global_rules": [], "pattern_rules": []}
-
-def save_rules(data):
-    with open(RULES_FILE, "w", encoding="utf-8") as f:
-        json.dump(data, f, ensure_ascii=False, indent=2)
-
-def evaluate_and_evolve_rules(memory, rules):
+def ai_governor_reasoning(memory, rules):
     history = memory.get("history", [])
     if not history:
         return rules, False
-    
-    updated = False
+        
+    last_run = history[-1]
+    system_prompt = "أنت الحاكم التنفيذي للسرب الذاتي (Executive Governor AI). تتخذ قرارات الحوكمة البرمجية والتشريعية."
+    user_prompt = f"""
+قم بتحليل نتائج التدقيق والتطور التاريخي لعمل السرب، وسَنّ قانون حوكمة جديد لرفع استقرار النظام:
+
+📊 إحصائيات السرب:
+- إجمالي عمليات التدقيق: {memory.get('total_audits', 0)}
+- حالة الفحص الأخير: {last_run.get('status')}
+- تفاصيل الأخطاء المرصودة: {json.dumps(last_run.get('errors', {}), ensure_ascii=False)}
+- القواعد النافذة حالياً: {json.dumps(rules.get('global_rules', []), ensure_ascii=False)}
+
+📋 المطلوب:
+صاغ قانوناً وقائياً/تطويرياً واحداً باللغة العربية بأسلوب احترافي ودقيق ليتم إضافته إلى دستور السرب (Global Rules).
+أرجع نص القانون فقط مباشرة دون أي مقدمات.
+"""
+    ai_rule, provider = call_ai(user_prompt, system_prompt)
     global_rules = rules.get("global_rules", [])
     
-    # ❌ الشرط الأول: التعلم الفوري من الأخطاء
-    last_run = history[-1]
-    if last_run.get("status") == "FAIL":
-        rule = "تلقائي: يجب تطبيق فحص وقائي إضافي عند رصد خطأ في الفحص السابق."
-        if rule not in global_rules:
-            global_rules.append(rule)
-            updated = True
-            print("🛡️ الحاكم يسن قانوناً وقائياً لمنع تكرار الخطأ!")
+    if ai_rule and len(ai_rule) > 5:
+        clean_rule = f"🤖 [{provider} Rule]: {ai_rule.strip()}"
+        if clean_rule not in global_rules:
+            global_rules.append(clean_rule)
+            rules["global_rules"] = global_rules
+            print(f"🛡️ [AI Governor - {provider}] تم سن قانون حوكمة جديد: {clean_rule}")
+            return rules, True
+    return rules, False
 
-    # 📊 الشرط الثاني: التطوير عند النجاح المستمر (3 فحوصات متتالية)
-    recent_status = [h.get("status") for h in history[-3:]]
-    if len(recent_status) == 3 and all(s == "PASS" for s in recent_status):
-        rule = "تلقائي: استقرار النظام مثبت، يُسمح بتوسيع نطاق السرب وزيادة الفحوصات."
-        if rule not in global_rules:
-            global_rules.append(rule)
-            updated = True
-            print("🚀 الحاكم يسن قانوناً لترقية كفاءة ونطاق عمل السرب!")
-
-    rules["global_rules"] = global_rules
-    return rules, updated
-
-def update_rules_engine(memory_data, rules_data):
-    """📜 محرك القواعد النمطية: يحلل التكرار ويضيف القواعد النمطية مع الحفاظ على القواعد العامة"""
-    history = memory_data.get("history", [])
-    error_counts = {}
-
-    # 📊 إحصاء تكرار الأنماط عبر السجل التاريخي
-    for run in history:
-        if run.get("status") == "FAIL":
-            for file_path, details in run.get("errors", {}).items():
-                err_type = "console_error" if "console_error" in str(details) else "general_error"
-                error_counts[err_type] = error_counts.get(err_type, 0) + 1
-
-    pattern_rules = rules_data.get("pattern_rules", [])
-    updated = False
-
-    # 📜 صياغة القواعد النمطية عند التكرار (مرتين فأكثر)
-    for err_type, count in error_counts.items():
-        if count >= 2:
-            existing = next((r for r in pattern_rules if r.get("error_type") == err_type), None)
-            if not existing:
-                pattern_rules.append({
-                    "error_type": err_type,
-                    "preventative_action": "comment_out",
-                    "created_at": datetime.now().strftime("%Y-%m-%d"),
-                    "occurrence_count": count
-                })
-                updated = True
-                print(f"📜 [Governor] تم تسجيل قاعدة نمطية جديدة للخطأ: {err_type}")
-            else:
-                if existing.get("occurrence_count") != count:
-                    existing["occurrence_count"] = count
-                    updated = True
-
-    rules_data["pattern_rules"] = pattern_rules
-    return rules_data, updated
-
-def generate_markdown_report(memory, rules, report_filename=REPORT_FILE):
-    """📄 توليد تقرير محلي شامل بصيغة Markdown يوثق حالة النظام والنتائج وقواعد الحوكمة"""
+def generate_markdown_report(memory, rules):
     history = memory.get("history", [])
     if not history:
-        print("ℹ️ لا توجد بيانات في الذاكرة لتوليد التقرير.")
         return
 
     last_run = history[-1]
     status_emoji = "✅ PASS" if last_run.get("status") == "PASS" else "⚠️ FAIL"
-    timestamp = last_run.get("timestamp", datetime.utcnow().isoformat())
     audited_files = last_run.get("audited_files", [])
     errors = last_run.get("errors", {})
 
-    global_rules = rules.get("global_rules", [])
-    pattern_rules = rules.get("pattern_rules", [])
-
-    report_lines = [
-        "# 📊 تقرير الفحص والتعافي الذاتي للسرب (Swarm Audit & Repair Report)",
+    lines = [
+        "# 📊 تقرير الفحص والتعافي الذاتي للسرب (Full Cloud AI Swarm Report)",
         "",
-        f"**تاريخ الفحص:** `{timestamp}`  ",
+        f"**تاريخ الفحص:** `{last_run.get('timestamp')}`  ",
         f"**الحالة العامة:** {status_emoji}  ",
         f"**إجمالي الفحوصات المكتملة:** `{memory.get('total_audits', 0)}`  ",
+        f"**بيئة الذكاء الاصطناعي:** `Cloud Multi-Model Swarm Engine`  ",
         "",
         "---",
         "",
-        "## 🔎 ملخص فحص الملفات (Audited Files)",
+        "## 🔎 ملخص تدقيق الملفات (Audited Files)",
         "",
         "| اسم الملف | الحالة | عدد الأخطاء | الصورة التشخيصية |",
         "| :--- | :---: | :---: | :--- |"
@@ -128,57 +84,23 @@ def generate_markdown_report(memory, rules, report_filename=REPORT_FILE):
     for file_path in audited_files:
         if file_path in errors:
             err_info = errors[file_path]
-            details = err_info.get("details", [])
-            err_count = len(details) if isinstance(details, list) else 1
-            screenshot = err_info.get("screenshot", "N/A")
-            screenshot_md = f"![Screenshot]({screenshot})" if screenshot != "N/A" else "لا توجد"
-            report_lines.append(f"| `{file_path}` | ❌ FAIL | `{err_count}` | {screenshot_md} |")
+            err_count = len(err_info.get("details", []))
+            shot = err_info.get("screenshot", "N/A")
+            shot_md = f"![Screenshot]({shot})" if shot != "N/A" else "لا توجد"
+            lines.append(f"| `{file_path}` | ❌ FAIL | `{err_count}` | {shot_md} |")
         else:
-            report_lines.append(f"| `{file_path}` | ✅ PASS | `0` | - |")
+            lines.append(f"| `{file_path}` | ✅ PASS | `0` | - |")
 
-    report_lines.extend([
-        "",
-        "---",
-        "",
-        "## 📜 قواعد الحوكمة النافذة (Active Governor Rules)",
-        "",
-        "### 🌐 القواعد العامة (Global Rules):"
-    ])
+    lines.extend(["", "---", "", "## 📜 دستور وقواعد الحاكم الذكي (AI Governor Rules):"])
+    for r in rules.get("global_rules", []):
+        lines.append(f"- {r}")
 
-    if global_rules:
-        for gr in global_rules:
-            report_lines.append(f"- 🛡️ {gr}")
-    else:
-        report_lines.append("- لا توجد قواعد عامة مسجلة حالياً.")
-
-    report_lines.extend([
-        "",
-        "### 🧩 القواعد النمطية المستنتجة (Pattern Rules):"
-    ])
-
-    if pattern_rules:
-        report_lines.append("| نوع الخطأ | الإجراء الوقائي | تاريخ الإنشاء | عدد التكرارات |")
-        report_lines.append("| :--- | :--- | :--- | :---: |")
-        for pr in pattern_rules:
-            report_lines.append(f"| `{pr.get('error_type')}` | `{pr.get('preventative_action')}` | `{pr.get('created_at')}` | `{pr.get('occurrence_count')}` |")
-    else:
-        report_lines.append("- لا توجد قواعد نمطية مسجلة حالياً.")
-
-    report_lines.extend([
-        "",
-        "---",
-        "",
-        "> 🤖 *تم إنشاء هذا التقرير تلقائياً بواسطة نظام الحوكمة والتعافي الذاتي.*"
-    ])
-
-    report_content = "\n".join(report_lines)
-    with open(report_filename, "w", encoding="utf-8") as f:
-        f.write(report_content)
-    
-    print(f"📄 [Governor] تم توليد التقرير المحلي بنجاح: {report_filename}")
+    with open(REPORT_FILE, "w", encoding="utf-8") as f:
+        f.write("\n".join(lines))
+    print(f"📄 [AI Governor] تم توثيق التقرير في: {REPORT_FILE}")
 
 async def audit_page(file_path):
-    print(f"🧪 [وكيل الفحص] بدء فحص الملف: {file_path}")
+    print(f"🧪 [AI Auditor] جاري تدقيق الصفحة: {file_path}")
     errors = []
     screenshot_path = None
     
@@ -193,73 +115,41 @@ async def audit_page(file_path):
         await page.goto(f"file://{full_path}")
         await page.wait_for_timeout(1000)
         
-        # 📸 الفحص الوقائي: التقاط صورة عند رصد أخطاء
         if errors:
             screenshot_path = f"error_{os.path.basename(file_path)}.png"
             await page.screenshot(path=screenshot_path)
-            print(f"📸 تم التقاط صورة تشخيصية: {screenshot_path}")
-        
+            
         await browser.close()
         
     return errors, screenshot_path
 
 if __name__ == "__main__":
-    print("🏛️ تشغيل الحاكم التنفيذي (Executive Governor)...")
+    print("🏛️ [Full AI Governor] بدء جلسة التدقيق والحوكمة بالذكاء الاصطناعي...")
+    rules = load_json(RULES_FILE, {"global_rules": [], "pattern_rules": []})
+    memory = load_json(MEMORY_FILE, {"last_run": None, "total_audits": 0, "history": [], "known_issues": []})
     
-    # 1. قراءة الدستور والذاكرة 📜🧠
-    rules = load_rules()
-    memory = load_memory()
-    
-    global_rules = rules.get("global_rules", [])
-    print(f"📜 تم تحميل {len(global_rules)} قوانين عامة من rules.json")
-    
-    # 2. اكتشاف جميع صفحات HTML وتكليف الوكلاء بفحصها 📂🐝
     html_files = glob.glob("**/*.html", recursive=True)
-    print(f"🔎 تم اكتشاف {len(html_files)} ملفات HTML لفحصها بواسطة السرب.")
-    
     all_errors = {}
-    total_errors_count = 0
     
     for file_path in html_files:
         errors, screenshot = asyncio.run(audit_page(file_path))
         if errors:
-            all_errors[file_path] = {
-                "details": errors,
-                "screenshot": screenshot
-            }
-            total_errors_count += len(errors)
+            all_errors[file_path] = {"details": errors, "screenshot": screenshot}
 
-    is_success = total_errors_count == 0
-    
-    # 3. تحديث سجلات الذاكرة 📊
+    is_success = len(all_errors) == 0
     memory["total_audits"] += 1
     memory["last_run"] = datetime.utcnow().isoformat()
     memory["history"].append({
         "timestamp": memory["last_run"],
         "status": "PASS" if is_success else "FAIL",
         "audited_files": html_files,
-        "errors": all_errors,
-        "governor_approval": True
+        "errors": all_errors
     })
     
-    # 4. تفعيل التطور الذاتي للقوانين العامة 🔄
-    rules, rules_updated = evaluate_and_evolve_rules(memory, rules)
-    
-    # 5. تفعيل محرك الأنماط المتكررة 📜
-    rules, pattern_updated = update_rules_engine(memory, rules)
-    
-    if rules_updated or pattern_updated:
-        save_rules(rules)
-        print("💾 تم حفظ القواعد المحدثة (العامة والنمطية) في rules.json!")
-    
-    # 6. حفظ الذاكرة المحدثة 💾
-    save_memory(memory)
-    
-    # 7. توليد التقرير المحلي 📄
-    generate_markdown_report(memory, rules)
-    
-    if is_success:
-        print(f"✅ الفحص التوسعي اكتمل بنجاح تحت إشراف الحاكم! إجمالي الفحوصات: {memory['total_audits']}")
-    else:
-        print(f"⚠️ تم رصد أخطاء وتسجيلها في الذاكرة وسَنّ قوانين وقائية: {all_errors}")
+    rules, updated = ai_governor_reasoning(memory, rules)
+    if updated:
+        save_json(RULES_FILE, rules)
         
+    save_json(MEMORY_FILE, memory)
+    generate_markdown_report(memory, rules)
+
