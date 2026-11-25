@@ -7,6 +7,7 @@ from playwright.async_api import async_playwright
 
 MEMORY_FILE = "memory.json"
 RULES_FILE = "rules.json"
+REPORT_FILE = "summary_report.md"
 
 def load_memory():
     if os.path.exists(MEMORY_FILE):
@@ -93,6 +94,89 @@ def update_rules_engine(memory_data, rules_data):
     rules_data["pattern_rules"] = pattern_rules
     return rules_data, updated
 
+def generate_markdown_report(memory, rules, report_filename=REPORT_FILE):
+    """📄 توليد تقرير محلي شامل بصيغة Markdown يوثق حالة النظام والنتائج وقواعد الحوكمة"""
+    history = memory.get("history", [])
+    if not history:
+        print("ℹ️ لا توجد بيانات في الذاكرة لتوليد التقرير.")
+        return
+
+    last_run = history[-1]
+    status_emoji = "✅ PASS" if last_run.get("status") == "PASS" else "⚠️ FAIL"
+    timestamp = last_run.get("timestamp", datetime.utcnow().isoformat())
+    audited_files = last_run.get("audited_files", [])
+    errors = last_run.get("errors", {})
+
+    global_rules = rules.get("global_rules", [])
+    pattern_rules = rules.get("pattern_rules", [])
+
+    report_lines = [
+        "# 📊 تقرير الفحص والتعافي الذاتي للسرب (Swarm Audit & Repair Report)",
+        "",
+        f"**تاريخ الفحص:** `{timestamp}`  ",
+        f"**الحالة العامة:** {status_emoji}  ",
+        f"**إجمالي الفحوصات المكتملة:** `{memory.get('total_audits', 0)}`  ",
+        "",
+        "---",
+        "",
+        "## 🔎 ملخص فحص الملفات (Audited Files)",
+        "",
+        "| اسم الملف | الحالة | عدد الأخطاء | الصورة التشخيصية |",
+        "| :--- | :---: | :---: | :--- |"
+    ]
+
+    for file_path in audited_files:
+        if file_path in errors:
+            err_info = errors[file_path]
+            details = err_info.get("details", [])
+            err_count = len(details) if isinstance(details, list) else 1
+            screenshot = err_info.get("screenshot", "N/A")
+            screenshot_md = f"![Screenshot]({screenshot})" if screenshot != "N/A" else "لا توجد"
+            report_lines.append(f"| `{file_path}` | ❌ FAIL | `{err_count}` | {screenshot_md} |")
+        else:
+            report_lines.append(f"| `{file_path}` | ✅ PASS | `0` | - |")
+
+    report_lines.extend([
+        "",
+        "---",
+        "",
+        "## 📜 قواعد الحوكمة النافذة (Active Governor Rules)",
+        "",
+        "### 🌐 القواعد العامة (Global Rules):"
+    ])
+
+    if global_rules:
+        for gr in global_rules:
+            report_lines.append(f"- 🛡️ {gr}")
+    else:
+        report_lines.append("- لا توجد قواعد عامة مسجلة حالياً.")
+
+    report_lines.extend([
+        "",
+        "### 🧩 القواعد النمطية المستنتجة (Pattern Rules):"
+    ])
+
+    if pattern_rules:
+        report_lines.append("| نوع الخطأ | الإجراء الوقائي | تاريخ الإنشاء | عدد التكرارات |")
+        report_lines.append("| :--- | :--- | :--- | :---: |")
+        for pr in pattern_rules:
+            report_lines.append(f"| `{pr.get('error_type')}` | `{pr.get('preventative_action')}` | `{pr.get('created_at')}` | `{pr.get('occurrence_count')}` |")
+    else:
+        report_lines.append("- لا توجد قواعد نمطية مسجلة حالياً.")
+
+    report_lines.extend([
+        "",
+        "---",
+        "",
+        "> 🤖 *تم إنشاء هذا التقرير تلقائياً بواسطة نظام الحوكمة والتعافي الذاتي.*"
+    ])
+
+    report_content = "\n".join(report_lines)
+    with open(report_filename, "w", encoding="utf-8") as f:
+        f.write(report_content)
+    
+    print(f"📄 [Governor] تم توليد التقرير المحلي بنجاح: {report_filename}")
+
 async def audit_page(file_path):
     print(f"🧪 [وكيل الفحص] بدء فحص الملف: {file_path}")
     errors = []
@@ -170,6 +254,9 @@ if __name__ == "__main__":
     
     # 6. حفظ الذاكرة المحدثة 💾
     save_memory(memory)
+    
+    # 7. توليد التقرير المحلي 📄
+    generate_markdown_report(memory, rules)
     
     if is_success:
         print(f"✅ الفحص التوسعي اكتمل بنجاح تحت إشراف الحاكم! إجمالي الفحوصات: {memory['total_audits']}")
