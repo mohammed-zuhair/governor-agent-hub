@@ -48,7 +48,7 @@ def ai_repair_file(file_path, content, error_info, rules):
     else:
         print(f"⚠️ [AI Worker] تنفيذ تعافي طوارئ احتياطي...")
         modified = False
-        img_pattern = r'(<img\s+[^>]*src=["']([^"']+)["'][^>]*>)'
+        img_pattern = r"(<img\s+[^>]*src=[\"']([^\"']+)[\"'][^>]*>)"
         for full_tag, src in re.findall(img_pattern, content):
             if not src.startswith(("http://", "https://", "data:")) and not os.path.exists(src):
                 fname = os.path.basename(src)
