@@ -1,45 +1,39 @@
 import os
-import traceback
+import subprocess
+from ai_engine import call_ai
 from notifier import send_telegram_message
 
 def run_swarm():
     print("🚀 بدء تشغيل السرب الذاتي...")
     
-    # فحص وجود المفاتيح في بيئة الخادم السحابي
-    gemini_k = "موجود ✅" if os.environ.get("GEMINI_API_KEY") else "مفقود ❌"
-    groq_k = "موجود ✅" if os.environ.get("GROQ_API_KEY") else "مفقود ❌"
-    deepseek_k = "موجود ✅" if os.environ.get("DEEPSEEK_API_KEY") else "مفقود ❌"
+    task_prompt = "قم بفحص وتطوير مشروع governor-agent-hub وزيادة استقراره."
+    if os.path.exists("roadmap.md"):
+        with open("roadmap.md", "r", encoding="utf-8") as f:
+            task_prompt = f.read()
 
+    print("🧠 جاري معالجة المهمة عبر الذكاء الاصطناعي...")
+    report, provider = call_ai(task_prompt, "أنت المعمار والمنفذ البرمجي للسرب. قدم تحليلاً استراتيجياً مفصلاً.")
+    
+    if not report:
+        send_telegram_message("⚠️ *تنبيه السرب:* فشل الاتصال بواجهات API. يُرجى التأكد من نسخ قيمة الـ API Key بشكل صحيح دون مسافات إضافية في GitHub Secrets.")
+        return
+
+    # كتابة التقرير
+    with open("EVOLUTION_PLAN.md", "w", encoding="utf-8") as f:
+        f.write(f"# 🚀 تقرير التطور الذاتي للسرب ({provider})\n\n{report}")
+    
+    # إرسال التقرير لـ Telegram
+    send_telegram_message(f"🧠 *تقرير وكيل الذكاء الاصطناعي [{provider}]:*\n\n{report[:600]}\n\n... 📄 التقرير الكامل تم حفظه في EVOLUTION_PLAN.md")
+
+    # رفع التقرير سحابياً إلى المستودع
     try:
-        from ai_engine import call_ai
-        
-        task_prompt = "قم بفحص وتطوير مشروع governor-agent-hub وزيادة استقراره."
-        if os.path.exists("roadmap.md"):
-            with open("roadmap.md", "r", encoding="utf-8") as f:
-                task_prompt = f.read()
-
-        report, provider = call_ai(task_prompt, "أنت المعمار والمنفذ البرمجي للسرب.")
-        
-        if not report:
-            status_msg = (
-                f"⚠️ *تشخيص السرب لمفاتيح API:*\n\n"
-                f"• `GEMINI_API_KEY`: {gemini_k}\n"
-                f"• `GROQ_API_KEY`: {groq_k}\n"
-                f"• `DEEPSEEK_API_KEY`: {deepseek_k}\n\n"
-                f"📌 *سبب التوقف:* إذا كان المفتاح مكتوب أمامه (مفقود ❌)، فالاسم المسجل في GitHub Secrets غير مطابق تماماً للحروف المكتوبة أعلاه."
-            )
-            send_telegram_message(status_msg)
-            return
-
-        # حفظ وإرسال التقرير
-        with open("EVOLUTION_PLAN.md", "w", encoding="utf-8") as f:
-            f.write(f"# 🚀 تقرير التطور الذاتي للسرب ({provider})\n\n{report}")
-        
-        send_telegram_message(f"🧠 *تقرير وكيل الذكاء الاصطناعي [{provider}]:*\n\n{report[:600]}\n\n... 📄 تم حفظ التقرير في EVOLUTION_PLAN.md")
-
+        subprocess.run(['git', 'config', 'user.name', 'github-actions[bot]'], check=False)
+        subprocess.run(['git', 'config', 'user.email', 'github-actions[bot]@users.noreply.github.com'], check=False)
+        subprocess.run(['git', 'add', 'EVOLUTION_PLAN.md'], check=False)
+        subprocess.run(['git', 'commit', '-m', '🤖 Auto-generate EVOLUTION_PLAN.md [skip ci]'], check=False)
+        subprocess.run(['git', 'push', 'origin', 'main'], check=False)
     except Exception as e:
-        err_msg = f"💥 *خطأ في تنفيذ المحرك:*\n`{str(e)}`"
-        send_telegram_message(err_msg)
+        print(f"تخطي الرفع التلقائي: {e}")
 
 if __name__ == "__main__":
     run_swarm()
