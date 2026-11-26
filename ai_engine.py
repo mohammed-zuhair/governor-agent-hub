@@ -1,8 +1,11 @@
 import os
 import requests
 
+def load_env_file():
+    """دالة احتياطية لمنع أخطاء الاستيراد"""
+    pass
+
 def call_ai(prompt, system_instruction=""):
-    # --- 1. تجربة Google Gemini ---
     gemini_key = os.environ.get("GEMINI_API_KEY")
     if gemini_key:
         try:
@@ -20,7 +23,6 @@ def call_ai(prompt, system_instruction=""):
         except Exception as e:
             print(f"⚠️ Gemini Exception: {e}")
 
-    # --- 2. تجربة Groq (Llama 3.3 / DeepSeek Distill) ---
     groq_key = os.environ.get("GROQ_API_KEY")
     if groq_key:
         try:
