@@ -1,0 +1,7 @@
+id: law_002
+name: "YAML Syntax Checker"
+trigger: "manual"
+scope: "**/*.yaml"
+check_logic: "You are a strict YAML validator. Read the provided file content. Check if it is valid YAML syntax. Return ONLY a JSON object with keys: 'is_valid' (boolean) and 'reason' (string)."
+severity: "error"
+enabled: true

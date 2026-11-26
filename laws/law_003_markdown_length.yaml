@@ -1,0 +1,7 @@
+id: law_003
+name: "Markdown Line Length"
+trigger: "manual"
+scope: "**/*.md"
+check_logic: "You are a Markdown linter. Read the provided file content. Check if any line exceeds 120 characters. Return ONLY a JSON object with keys: 'is_valid' (boolean) and 'reason' (string)."
+severity: "warning"
+enabled: true
