@@ -1,43 +1,29 @@
 import os
-import json
 import yaml
-from groq import Groq
+from llm_router import call_llm
 
 def main():
-    # 1. Load API Key from Environment
-    api_key = os.environ.get("GROQ_API_KEY")
-    if not api_key:
-        print("Error: GROQ_API_KEY is not set.")
-        return
-
-    # 2. Load the Law
+    # 1. Load the Law
     law_path = "laws/law_001_json_syntax.yaml"
     with open(law_path, "r", encoding="utf-8") as f:
         law = yaml.safe_load(f)
 
-    # 3. Read the target file (Testing on STATE.json)
+    # 2. Read the target file
     target_file = "state/STATE.json"
     with open(target_file, "r", encoding="utf-8") as f:
         file_content = f.read()
 
-    # 4. Setup Groq Client
-    client = Groq(api_key=api_key)
+    # 3. Prepare Prompts
+    system_prompt = law["check_logic"]
+    user_prompt = f"File: {target_file}\nContent:\n{file_content}"
 
-    # 5. Call the LLM
+    # 4. Call the Router
     print(f"Agent running Law: {law['name']} on {target_file}...")
-    chat_completion = client.chat.completions.create(
-        messages=[
-            {"role": "system", "content": law["check_logic"]},
-            {"role": "user", "content": f"File: {target_file}\nContent:\n{file_content}"}
-        ],
-        model="openai/gpt-oss-120b",
-        temperature=0.1,
-        response_format={"type": "json_object"} # Force JSON output
-    )
+    result, provider = call_llm(system_prompt, user_prompt)
 
-    # 6. Print Result
-    result = chat_completion.choices[0].message.content
+    # 5. Print Result
     print("\n--- Agent Result ---")
+    print(f"Provider Used: {provider}")
     print(result)
 
 if __name__ == "__main__":
