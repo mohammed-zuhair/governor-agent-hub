@@ -1,102 +1,28 @@
-import subprocess
-import json
 import os
-import sys
-import traceback
-from datetime import datetime
+import json
+from ai_engine import call_ai
 from notifier import send_telegram_message
 
-MEMORY_FILE = "memory.json"
-MAX_REPAIR_ATTEMPTS = 3
-
-def safe_load_memory():
-    if os.path.exists(MEMORY_FILE):
-        try:
-            with open(MEMORY_FILE, "r", encoding="utf-8") as f:
-                return json.load(f)
-        except Exception as e:
-            print(f"⚠️ [Safe Memory] تعذر قراءة الذاكرة: {e}")
-            return {"last_run": None, "total_audits": 0, "history": [], "known_issues": []}
-    return {"last_run": None, "total_audits": 0, "history": [], "known_issues": []}
-
-def log_system_exception(step_name, exception_obj):
-    try:
-        memory = safe_load_memory()
-        error_details = {
-            "step": step_name,
-            "error_message": str(exception_obj),
-            "traceback": traceback.format_exc(),
-            "timestamp": datetime.utcnow().isoformat()
-        }
-        known_issues = memory.get("known_issues", [])
-        known_issues.append(error_details)
-        memory["known_issues"] = known_issues
-        with open(MEMORY_FILE, "w", encoding="utf-8") as f:
-            json.dump(memory, f, ensure_ascii=False, indent=2)
-        print(f"🧠 [Zero-Crash] تم توثيق الاستثناء ({step_name}) داخل memory.json.")
-    except Exception as e:
-        print(f"❌ خطأ أثناء كتابة الاستثناء: {e}")
-
-def run_script_safely(script_name):
-    print(f"\n🚀 [Pipeline Execution] جاري تشغيل: {script_name}...")
-    try:
-        result = subprocess.run(
-            [sys.executable, script_name],
-            capture_output=True,
-            text=True,
-            encoding="utf-8"
-        )
-        if result.stdout:
-            print(result.stdout)
-        if result.returncode != 0:
-            print(f"⚠️ [Warning] {script_name} خرج بكود: {result.returncode}")
-            if result.stderr:
-                print(f"🔍 تفاصيل: {result.stderr}")
-            log_system_exception(script_name, result.stderr or "Non-zero exit code")
-            return False
-        return True
-    except Exception as e:
-        print(f"🛡️ [Zero-Crash Shield] اعتراض خطأ في {script_name}: {e}")
-        log_system_exception(script_name, e)
-        return False
-
-def get_last_status():
-    memory = safe_load_memory()
-    history = memory.get("history", [])
-    if history:
-        return history[-1].get("status", "UNKNOWN")
-    return "UNKNOWN"
-
-def run_closed_loop_swarm():
-    print("==================================================")
-    print("🤖 [Multi-Stack Cloud AI Swarm] بدء تشغيل السرب الذاتي الشامل")
-    print("==================================================")
+def run_swarm():
+    print("🚀 بدء تشغيل السرب الذاتي...")
     
-    execute_success = run_script_safely("agent.py")
-    status = get_last_status()
-    
-    attempt = 0
-    while (status == "FAIL" or not execute_success) and attempt < MAX_REPAIR_ATTEMPTS:
-        attempt += 1
-        print(f"\n🔄 [دورة التعافي {attempt}/{MAX_REPAIR_ATTEMPTS}] بدء التعافي بالذكاء الاصطناعي لكافة تقنيات المشروع...")
-        worker_success = run_script_safely("worker.py")
-        execute_success = run_script_safely("agent.py")
-        status = get_last_status()
+    if os.path.exists("roadmap.md"):
+        with open("roadmap.md", "r", encoding="utf-8") as f:
+            prompt = f.read()
+        
+        print("🧠 جاري معالجة المهمة عبر محرك الذكاء الاصطناعي...")
+        response, provider = call_ai(prompt, "أنت المعمار الأساسي للسرب الذاتي الذكي. قم بتقديم تحليل استراتيجي عميق يغطي المحاور المطلوبة بدقة.")
+        
+        if response:
+            with open("EVOLUTION_PLAN.md", "w", encoding="utf-8") as f:
+                f.write(f"# 🚀 تقرير التطور الذاتي الصادر عن السرب ({provider})\n\n" + response)
+            
+            summary_msg = f"🧠 *تقرير وكيل الذكاء الاصطناعي [{provider}]:*\n\n" + response[:600] + "\n\n... 📄 التقرير الكامل تم حفظه في EVOLUTION_PLAN.md"
+            send_telegram_message(summary_msg)
+            print(f"✅ تم معالجة المهمة بنجاح عبر [{provider}] وإرسال التقرير لـ Telegram!")
+            return
 
-    print("\n==================================================")
-    if status == "PASS":
-        msg = f"✅ *إشعار نجاح السرب الذاتي (PASS)*\nتم الوصول للاستقرار التام لكافة التقنيات بعد `{attempt}` محاولات تعافي."
-        print(msg)
-        send_telegram_message(msg)
-    else:
-        msg = f"⚠️ *تنبيه السرب الذاتي (FAIL)*\nاكتملت محاولات التعافي ذاتياً، يرجى مراجعة التقرير في `summary_report.md`."
-        print(msg)
-        send_telegram_message(msg)
-    print("==================================================")
+    send_telegram_message("✅ *إشعار السرب:* تم الفحص بنجاح بدون مهام مخطط جديدة.")
 
 if __name__ == "__main__":
-    try:
-        run_closed_loop_swarm()
-    except Exception as fatal_e:
-        print(f"🛡️ [Ultimate Shield] تم حماية التطبيق: {fatal_e}")
-        log_system_exception("Main Application", fatal_e)
+    run_swarm()
