@@ -6,19 +6,22 @@ def load_env_file():
     """تحميل ملف .env محلياً تلقائياً بدون الحاجة لمكتبات خارجية"""
     env_path = os.path.join(os.path.dirname(__file__), ".env")
     if os.path.exists(env_path):
-        with open(env_path, "r", encoding="utf-8") as f:
-            for line in f:
-                line = line.strip()
-                if line and not line.startswith("#") and "=" in line:
-                    k, v = line.split("=", 1)
-                    os.environ[k.strip()] = v.strip()
+        try:
+            with open(env_path, "r", encoding="utf-8") as f:
+                for line in f:
+                    line = line.strip()
+                    if line and not line.startswith("#") and "=" in line:
+                        k, v = line.split("=", 1)
+                        os.environ[k.strip()] = v.strip()
+        except Exception as e:
+            print(f"⚠️ [AI Engine] تعذر تحميل ملف .env: {e}")
 
-# تحميل المتغيرات فور استدعاء المحرك
 load_env_file()
 
 def call_ai(prompt, system_instruction=""):
-    """محرك الذكاء الاصطناعي السحابي المتعدد (Multi-Model Resilient AI Engine)"""
-    
+    """
+    محرك الذكاء الاصطناعي السحابي الشامل والتنقل الآلي بين النماذج (Resilient Multi-Model Engine)
+    """
     # 1️⃣ Google Gemini API
     gemini_key = os.getenv("GEMINI_API_KEY")
     if gemini_key:
@@ -35,7 +38,7 @@ def call_ai(prompt, system_instruction=""):
         except Exception as e:
             print(f"⚠️ [AI Engine] فشل Gemini: {e}")
 
-    # 2️⃣ Groq API (Super Fast Llama 3.3)
+    # 2️⃣ Groq API (Super Fast Llama 3.3 70B)
     groq_key = os.getenv("GROQ_API_KEY")
     if groq_key:
         try:
@@ -56,7 +59,28 @@ def call_ai(prompt, system_instruction=""):
         except Exception as e:
             print(f"⚠️ [AI Engine] فشل Groq: {e}")
 
-    # 3️⃣ OpenAI API
+    # 3️⃣ DeepSeek API
+    deepseek_key = os.getenv("DEEPSEEK_API_KEY")
+    if deepseek_key:
+        try:
+            url = "https://api.deepseek.com/v1/chat/completions"
+            payload = {
+                "model": "deepseek-chat",
+                "messages": [
+                    {"role": "system", "content": system_instruction or "You are an expert autonomous software engineer."},
+                    {"role": "user", "content": prompt}
+                ]
+            }
+            req = urllib.request.Request(url, data=json.dumps(payload).encode('utf-8'), 
+                                         headers={"Content-Type": "application/json", "Authorization": f"Bearer {deepseek_key}"})
+            with urllib.request.urlopen(req, timeout=30) as resp:
+                res = json.loads(resp.read().decode('utf-8'))
+                text = res['choices'][0]['message']['content']
+                return text.strip(), "DeepSeek-V3"
+        except Exception as e:
+            print(f"⚠️ [AI Engine] فشل DeepSeek: {e}")
+
+    # 4️⃣ OpenAI API
     openai_key = os.getenv("OPENAI_API_KEY")
     if openai_key:
         try:
@@ -78,4 +102,3 @@ def call_ai(prompt, system_instruction=""):
             print(f"⚠️ [AI Engine] فشل OpenAI: {e}")
 
     return None, "No Active API Provider"
-

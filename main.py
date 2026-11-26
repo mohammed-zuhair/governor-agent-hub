@@ -4,6 +4,7 @@ import os
 import sys
 import traceback
 from datetime import datetime
+from notifier import send_telegram_message
 
 MEMORY_FILE = "memory.json"
 MAX_REPAIR_ATTEMPTS = 3
@@ -14,7 +15,7 @@ def safe_load_memory():
             with open(MEMORY_FILE, "r", encoding="utf-8") as f:
                 return json.load(f)
         except Exception as e:
-            print(f"⚠️ [Safe Memory] تعذر قراءة الذاكرة بسبب خطأ: {e}")
+            print(f"⚠️ [Safe Memory] تعذر قراءة الذاكرة: {e}")
             return {"last_run": None, "total_audits": 0, "history": [], "known_issues": []}
     return {"last_run": None, "total_audits": 0, "history": [], "known_issues": []}
 
@@ -68,7 +69,7 @@ def get_last_status():
 
 def run_closed_loop_swarm():
     print("==================================================")
-    print("🤖 [Autonomous AI Swarm] بدء تشغيل السرب الذكي بالكامل")
+    print("🤖 [Multi-Stack Cloud AI Swarm] بدء تشغيل السرب الذاتي الشامل")
     print("==================================================")
     
     execute_success = run_script_safely("agent.py")
@@ -77,17 +78,20 @@ def run_closed_loop_swarm():
     attempt = 0
     while (status == "FAIL" or not execute_success) and attempt < MAX_REPAIR_ATTEMPTS:
         attempt += 1
-        print(f"\n🔄 [دورة التعافي {attempt}/{MAX_REPAIR_ATTEMPTS}] بدء التعافي بالذكاء الاصطناعي...")
+        print(f"\n🔄 [دورة التعافي {attempt}/{MAX_REPAIR_ATTEMPTS}] بدء التعافي بالذكاء الاصطناعي لكافة تقنيات المشروع...")
         worker_success = run_script_safely("worker.py")
         execute_success = run_script_safely("agent.py")
         status = get_last_status()
 
     print("\n==================================================")
     if status == "PASS":
-        print(f"✅ [Swarm Success] وصل النظام للاستقرار التام بعد {attempt} محاولات!")
+        msg = f"✅ *إشعار نجاح السرب الذاتي (PASS)*\nتم الوصول للاستقرار التام لكافة التقنيات بعد `{attempt}` محاولات تعافي."
+        print(msg)
+        send_telegram_message(msg)
     else:
-        print(f"ℹ️ [Swarm Notice] اكتملت دورة التشغيل وتطوير القواعد تلقائياً.")
-    print("📄 التقرير النهائي في summary_report.md")
+        msg = f"⚠️ *تنبيه السرب الذاتي (FAIL)*\nاكتملت محاولات التعافي ذاتياً، يرجى مراجعة التقرير في `summary_report.md`."
+        print(msg)
+        send_telegram_message(msg)
     print("==================================================")
 
 if __name__ == "__main__":
@@ -96,4 +100,3 @@ if __name__ == "__main__":
     except Exception as fatal_e:
         print(f"🛡️ [Ultimate Shield] تم حماية التطبيق: {fatal_e}")
         log_system_exception("Main Application", fatal_e)
-
