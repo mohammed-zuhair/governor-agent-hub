@@ -16,26 +16,26 @@ def load_json(filepath, default):
     return default
 
 def ai_repair_file(file_path, content, error_info, rules):
-    system_prompt = "أنت مهندس برمجي ومسؤول تعافي وتكيف تلقائي عالي الخبرة. تقوم بتعديل وإصلاح الكود بذكاء اصطناعي كامل."
+    ext = os.path.splitext(file_path)[1].lower()
+    system_prompt = f"أنت مهندس برمجي خبير ومسؤول تعافي ذاتي متخصص في لغة/تقنية ({ext}). تقوم بإصلاح وتعديل الكود بذكاء اصطناعي كامل."
+    
     user_prompt = f"""
-قم بإصلاح وتعديل ملف الويب التالي بشكل كامل وذكائي دون إتلاف التنسيق:
+قم بإصلاح الملف البرمجي التالي وتعديله بدقة دون إتلاف بنيته:
 
-📄 الملف المستهدف: {file_path}
-🚨 خطأ التدقيق المرصود: {json.dumps(error_info, ensure_ascii=False)}
-📜 دستور الحوكمة والقواعد: {json.dumps(rules, ensure_ascii=False)}
+📄 الملف: {file_path} (نوع التقنية: {ext})
+🚨 تفاصيل الخطأ المرصود: {json.dumps(error_info, ensure_ascii=False)}
+📜 القواعد النافذة: {json.dumps(rules, ensure_ascii=False)}
 
-💻 كود الملف الحالي:
-```html
+💻 الكود الحالي للملف:
+```{ext.replace('.', '')}
 {content}
 ```
 
-📋 المطلوب منك كوكيل ذكاء اصطناعي مستقِل:
-1. قم بإصلاح السبب الجذري للخطأ (Missing image, JS error, broken link, structural unclosed tag).
-2. إذا كان الخطأ بسيطاً، قم بإعادة كتابته جراحياً بشكل صحيح.
-3. إذا كان الخطأ غير مضمون، حوطه بـ try...catch أو إدراج fallback ديناميكي آمن (مثل https://placehold.co/600x400?text=Missing+File).
-4. أرجع الكود المكتمل النهائي فقط دون أي مقدمات أو شروحات جانبية.
+📋 التعليمات المطلوبة:
+1. قم بتشخيص وصيانة السبب الجذري للخطأ البرمجي في ({ext}).
+2. أرجع الكود المكتمل السليم والنهائي فقط داخل العلامات دون أي مقدمات أو شروحات جانبية.
 """
-    print(f"🧠 [AI Worker] جاري التحليل والتعافي بواسطة الذكاء الاصطناعي...")
+    print(f"🧠 [AI Worker] جاري التعافي بالذكاء الاصطناعي للملف ({file_path})...")
     repaired_code, provider = call_ai(user_prompt, system_prompt)
     
     if repaired_code:
@@ -46,22 +46,18 @@ def ai_repair_file(file_path, content, error_info, rules):
         print(f"✨ [AI Worker] تم التعافي الذاتي بنجاح عبر ({provider}) للملف: {file_path}")
         return repaired_code.strip(), True
     else:
-        print(f"⚠️ [AI Worker] تنفيذ تعافي طوارئ احتياطي...")
-        modified = False
-        img_pattern = r"(<img\s+[^>]*src=[\"']([^\"']+)[\"'][^>]*>)"
-        for full_tag, src in re.findall(img_pattern, content):
-            if not src.startswith(("http://", "https://", "data:")) and not os.path.exists(src):
-                fname = os.path.basename(src)
-                new_tag = full_tag.replace(src, f"https://placehold.co/600x400?text=Missing:+{fname}")
-                content = content.replace(full_tag, new_tag)
-                modified = True
-        if "<html" in content and "</html>" not in content:
-            content += "\n</html>"
-            modified = True
-        return content, modified
+        print(f"⚠️ [AI Worker] تنفيذ تعافي احتياطي طارئ للملف {file_path}...")
+        if ext == ".html":
+            img_pattern = r"(<img\s+[^>]*src=[\"']([^\"']+)[\"'][^>]*>)"
+            for full_tag, src in re.findall(img_pattern, content):
+                if not src.startswith(("http://", "https://", "data:")) and not os.path.exists(src):
+                    fname = os.path.basename(src)
+                    new_tag = full_tag.replace(src, f"https://placehold.co/600x400?text=Missing:+{fname}")
+                    content = content.replace(full_tag, new_tag)
+        return content, True
 
 def run_worker():
-    print("🐝 [Full AI Worker] بدء جولة صيانة السرب الذكي...")
+    print("🐝 [Multi-Stack AI Worker] بدء صيانة مختلف تقنيات المشروع...")
     memory = load_json(MEMORY_FILE, {})
     rules = load_json(RULES_FILE, {})
     
@@ -84,4 +80,4 @@ def run_worker():
 
 if __name__ == "__main__":
     run_worker()
-
+    
