@@ -5,39 +5,13 @@ def load_env_file():
     pass
 
 def call_ai(prompt, system_instruction=""):
-    errors = []
-
-    # --- 1. تجربة Google Gemini (سلسلة التبديل التلقائي) ---
-    gemini_key = os.environ.get("GEMINI_API_KEY")
-    if gemini_key:
-        clean_key = gemini_key.strip().strip('"').strip("'")
-        models_to_try = ["gemini-2.5-flash", "gemini-2.0-flash", "gemini-1.5-flash"]
-        for model_name in models_to_try:
-            try:
-                url = f"https://generativelanguage.googleapis.com/v1beta/models/{model_name}:generateContent?key={clean_key}"
-                headers = {"Content-Type": "application/json"}
-                payload = {
-                    "contents": [{"parts": [{"text": f"{system_instruction}\n\n{prompt}"}]}]
-                }
-                res = requests.post(url, json=payload, timeout=30)
-                if res.status_code == 200:
-                    text = res.json()['candidates'][0]['content']['parts'][0]['text']
-                    return text, f"Google Gemini ({model_name})"
-                else:
-                    errors.append(f"Gemini [{model_name}]: HTTP {res.status_code}")
-            except Exception as e:
-                errors.append(f"Gemini [{model_name}] Exc: {str(e)}")
-    else:
-        errors.append("Gemini: المفتاح مفقود")
-
-    # --- 2. تجربة Groq ---
-    groq_key = os.environ.get("GROQ_API_KEY")
-    if groq_key:
+    # --- 1. تجربة Groq أولاً ---
+    groq_key = os.environ.get("GROQ_API_KEY", "").strip()
+    if groq_key and groq_key.startswith("gsk_"):
         try:
-            clean_groq = groq_key.strip().strip('"').strip("'")
             url = "https://api.groq.com/openai/v1/chat/completions"
             headers = {
-                "Authorization": f"Bearer {clean_groq}",
+                "Authorization": f"Bearer {groq_key}",
                 "Content-Type": "application/json"
             }
             payload = {
@@ -52,10 +26,30 @@ def call_ai(prompt, system_instruction=""):
                 text = res.json()['choices'][0]['message']['content']
                 return text, "Groq (Llama-3.3)"
             else:
-                errors.append(f"Groq [{res.status_code}]: {res.text[:100]}")
+                print(f"⚠️ Groq HTTP Error {res.status_code}: {res.text}")
         except Exception as e:
-            errors.append(f"Groq Exc: {str(e)}")
-    else:
-        errors.append("Groq: المفتاح مفقود")
+            print(f"⚠️ Groq Exc: {e}")
 
-    return None, "\n".join(errors)
+    # --- 2. تجربة Google Gemini عبر SDK الرسمي ---
+    gemini_key = os.environ.get("GEMINI_API_KEY", "").strip()
+    if gemini_key:
+        try:
+            import google.generativeai as genai
+            genai.configure(api_key=gemini_key)
+            
+            models_to_try = ["gemini-1.5-flash", "gemini-2.0-flash-exp", "gemini-1.5-pro"]
+            for model_name in models_to_try:
+                try:
+                    model = genai.GenerativeModel(
+                        model_name=model_name,
+                        system_instruction=system_instruction if system_instruction else None
+                    )
+                    response = model.generate_content(prompt)
+                    if response and response.text:
+                        return response.text, f"Google Gemini ({model_name})"
+                except Exception as inner_e:
+                    print(f"⚠️ Gemini {model_name} failed: {inner_e}")
+        except Exception as e:
+            print(f"⚠️ Gemini SDK Exception: {e}")
+
+    return None, "تعذر الحصول على استجابة من Groq أو Gemini"
