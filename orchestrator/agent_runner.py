@@ -3,13 +3,13 @@ import yaml
 from llm_router import call_llm
 
 def main():
-    # 1. Load the Law
-    law_path = "laws/law_001_json_syntax.yaml"
+    # 1. Load the Law (using ../ to go up one directory)
+    law_path = "../laws/law_001_json_syntax.yaml"
     with open(law_path, "r", encoding="utf-8") as f:
         law = yaml.safe_load(f)
 
     # 2. Read the target file
-    target_file = "state/STATE.json"
+    target_file = "../state/STATE.json"
     with open(target_file, "r", encoding="utf-8") as f:
         file_content = f.read()
 
