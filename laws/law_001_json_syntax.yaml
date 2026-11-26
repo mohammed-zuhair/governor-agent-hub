@@ -1,0 +1,7 @@
+id: law_001
+name: "JSON Syntax Checker"
+trigger: "manual"
+scope: "**/*.json"
+check_logic: "You are a strict JSON validator. Read the provided file content. Check if it is valid JSON. Return ONLY a JSON object with keys: 'is_valid' (boolean) and 'reason' (string). Do not add markdown formatting."
+severity: "error"
+enabled: true
