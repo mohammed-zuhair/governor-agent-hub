@@ -30,7 +30,7 @@ def main():
             {"role": "system", "content": law["check_logic"]},
             {"role": "user", "content": f"File: {target_file}\nContent:\n{file_content}"}
         ],
-        model="llama-3.3-70b-versatile",
+        model="openai/gpt-oss-120b",
         temperature=0.1,
         response_format={"type": "json_object"} # Force JSON output
     )
