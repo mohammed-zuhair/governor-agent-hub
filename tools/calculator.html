@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Modern Calculator</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
+<style>
+    :root {
+        --bg: #1e1e2f;
+        --panel: #2c2c3d;
+        --button: #3b3b5c;
+        --button-hover: #4d4d73;
+        --accent: #ffb86c;
+        --text: #e0e0e6;
+        --display-bg: #0f0f1a;
+        --font: 'Inter', sans-serif;
+    }
+    body {
+        margin: 0;
+        height: 100vh;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        background: linear-gradient(135deg, #2c2c3d, #1e1e2f);
+        font-family: var(--font);
+        color: var(--text);
+    }
+    .calculator {
+        width: 340px;
+        background: var(--panel);
+        border-radius: 20px;
+        box-shadow: 0 15px 35px rgba(0,0,0,0.3);
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+    }
+    .display {
+        background: var(--display-bg);
+        padding: 20px;
+        text-align: right;
+        font-size: 2.4rem;
+        letter-spacing: 1px;
+        overflow-x: auto;
+        min-height: 70px;
+    }
+    .buttons {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 1px;
+        background: var(--bg);
+    }
+    button {
+        background: var(--button);
+        border: none;
+        font-size: 1.4rem;
+        padding: 20px;
+        cursor: pointer;
+        color: var(--text);
+        transition: background 0.2s, transform 0.1s;
+        outline: none;
+    }
+    button:hover {
+        background: var(--button-hover);
+    }
+    button:active {
+        transform: translateY(2px);
+    }
+    .operator {
+        background: var(--accent);
+        color: #2c2c3d;
+    }
+    .operator:hover {
+        background: #ffcb8a;
+    }
+    .span-two {
+        grid-column: span 2;
+    }
+    @media (max-width: 380px) {
+        .calculator { width: 95%; }
+    }
+</style>
+</head>
+<body>
+<div class="calculator">
+    <div id="display" class="display">0</div>
+    <div class="buttons">
+        <button id="clear" class="span-two">C</button>
+        <button id="sign">±</button>
+        <button id="percent">%</button>
+
+        <button class="operator" data-op="/">÷</button>
+        <button data-num="7">7</button>
+        <button data-num="8">8</button>
+        <button data-num="9">9</button>
+        <button class="operator" data-op="*">×</button>
+
+        <button data-num="4">4</button>
+        <button data-num="5">5</button>
+        <button data-num="6">6</button>
+        <button class="operator" data-op="-">−</button>
+
+        <button data-num="1">1</button>
+        <button data-num="2">2</button>
+        <button data-num="3">3</button>
+        <button class="operator" data-op="+">+</button>
+
+        <button data-num="0" class="span-two">0</button>
+        <button data-num=".">.</button>
+        <button id="equals" class="operator">=</button>
+    </div>
+</div>
+
+<script>
+    (function(){
+        const display = document.getElementById('display');
+        let current = '';
+        let previous = '';
+        let operator = null;
+        let resetDisplay = false;
+
+        function updateDisplay() {
+            display.textContent = current || previous || '0';
+        }
+
+        function appendNumber(num) {
+            if (resetDisplay) {
+                current = '';
+                resetDisplay = false;
+            }
+            if (num === '.' && current.includes('.')) return;
+            if (current === '0' && num !== '.') {
+                current = num;
+            } else {
+                current += num;
+            }
+            updateDisplay();
+        }
+
+        function chooseOperator(op) {
+            if (current === '' && previous === '') return;
+            if (previous && current) compute();
+            operator = op;
+            previous = current || previous;
+            current = '';
+            updateDisplay();
+        }
+
+        function compute() {
+            let result;
+            const prev = parseFloat(previous);
+            const curr = parseFloat(current);
+            if (isNaN(prev) || isNaN(curr)) return;
+            switch (operator) {
+                case '+': result = prev + curr; break;
+                case '-': result = prev - curr; break;
+                case '*': result = prev * curr; break;
+                case '/': result = curr !== 0 ? prev / curr : 'Error'; break;
+                default: return;
+            }
+            current = result.toString();
+            operator = null;
+            previous = '';
+            resetDisplay = true;
+            updateDisplay();
+        }
+
+        function clearAll() {
+            current = '';
+            previous = '';
+            operator = null;
+            updateDisplay();
+        }
+
+        function toggleSign() {
+            if (current) {
+                if (current.startsWith('-')) {
+                    current = current.slice(1);
+                } else {
+                    current = '-' + current;
+                }
+                updateDisplay();
+            }
+        }
+
+        function percent() {
+            if (current) {
+                current = (parseFloat(current) / 100).toString();
+                updateDisplay();
+            }
+        }
+
+        document.querySelectorAll('[data-num]').forEach(btn => {
+            btn.addEventListener('click', () => appendNumber(btn.dataset.num));
+        });
+        document.querySelectorAll('.operator[data-op]').forEach(btn => {
+            btn.addEventListener('click', () => chooseOperator(btn.dataset.op));
+        });
+        document.getElementById('equals').addEventListener('click', compute);
+        document.getElementById('clear').addEventListener('click', clearAll);
+        document.getElementById('sign').addEventListener('click', toggleSign);
+        document.getElementById('percent').addEventListener('click', percent);
+
+        // Keyboard support
+        document.addEventListener('keydown', e => {
+            if (e.key >= '0' && e.key <= '9') {
+                appendNumber(e.key);
+            } else if (e.key === '.') {
+                appendNumber('.');
+            } else if (e.key === '+' || e.key === '-' || e.key === '*' || e.key === '/') {
+                const map = {'+':'+','-':'-','*':'*','/':'/'};
+                chooseOperator(map[e.key]);
+            } else if (e.key === 'Enter' || e.key === '=') {
+                compute();
+            } else if (e.key === 'Backspace') {
+                clearAll();
+            } else if (e.key === 'Escape') {
+                clearAll();
+            }
+        });
+        updateDisplay();
+    })();
+</script>
+</body>
+</html>
