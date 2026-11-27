@@ -1,40 +1,32 @@
 import os
-from groq import Groq
-import google.generativeai as genai
+from scalexi_llm import LLMProxy
 
-def call_llm(system_prompt, user_prompt, json_mode=False):
-    # المحاولة الأولى: Groq
+# تهيئة الوكيل الموحد
+llm = LLMProxy()
+
+def call_llm(system_prompt, user_prompt, json_mode=False, model_name="groq/llama-3.3-70b-versatile"):
+    """
+    دالة موحدة لاستدعاء أي نموذج من أي مزود.
+    يمكنك تغيير model_name إلى:
+    - "deepseek/deepseek-chat"
+    - "google/gemini-1.5-flash"
+    - "xai/grok-beta"
+    - "groq/llama-3.3-70b-versatile"
+    """
     try:
-        print("Attempting Groq...")
-        client = Groq(api_key=os.environ.get("GROQ_API_KEY"))
-        kwargs = {}
-        if json_mode:
-            kwargs["response_format"] = {"type": "json_object"}
-            
-        response = client.chat.completions.create(
-            messages=[
-                {"role": "system", "content": system_prompt},
-                {"role": "user", "content": user_prompt}
-            ],
-            model="openai/gpt-oss-120b",
-            **kwargs
+        print(f"Routing to: {model_name}")
+        response, exec_time, token_usage, cost = llm.ask_llm(
+            model_name=model_name,
+            system_prompt=system_prompt,
+            user_prompt=user_prompt,
+            structured_output=json_mode # تفعيل JSON mode إذا لزم الأمر
         )
-        return response.choices[0].message.content, "Groq"
-    except Exception as e:
-        print(f"Groq failed: {e}")
-        print("Falling back to Gemini...")
-
-    # المحاولة الثانية: Gemini
-    try:
-        genai.configure(api_key=os.environ.get("GEMINI_API_KEY"))
-        model = genai.GenerativeModel('gemini-1.5-flash')
         
-        json_instr = "Return ONLY a valid JSON object. No markdown formatting." if json_mode else "Return ONLY raw code. No markdown formatting."
-        full_prompt = f"{system_prompt}\n\n{user_prompt}\n\n{json_instr}"
-        
-        response = model.generate_content(full_prompt)
-        text = response.text.replace("```html", "").replace("```json", "").replace("```", "").strip()
-        return text, "Gemini"
+        # تنظيف المخرجات إذا كانت JSON
+        if json_mode:
+            response = response.replace("```json", "").replace("```", "").strip()
+            
+        return response, model_name
     except Exception as e:
-        print(f"Gemini also failed: {e}")
+        print(f"ScaleXI LLM failed: {e}")
         return None, "Failed"

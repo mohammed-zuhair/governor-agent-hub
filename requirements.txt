@@ -1,6 +1,7 @@
-groq==0.11.0
+scalexi_llm
+pyyaml
+pydantic
+requests
+google-generativeai
+groq
 httpx==0.27.2
-pyyaml==6.0.2
-pydantic==2.9.2
-requests==2.32.3
-google-generativeai==0.8.3
