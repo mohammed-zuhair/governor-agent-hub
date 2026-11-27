@@ -1,5 +1,6 @@
 import os
 import requests
+import sys
 
 TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN")
 CHAT_ID = os.environ.get("TELEGRAM_CHAT_ID")
@@ -17,33 +18,38 @@ def trigger_workflow(workflow_name, inputs=None):
     if inputs:
         payload["inputs"] = inputs
     res = requests.post(url, headers=headers, json=payload)
-    # طباعة حالة الطلب في السجل لمعرفة الأخطاء
-    print(f"Triggering {workflow_name} - Status Code: {res.status_code}")
-    if res.status_code != 204:
-        print(f"Error: {res.text}")
+    print(f"Triggering {workflow_name} - Status Code: {res.status_code}", flush=True)
     return res.status_code == 204
 
 def main():
-    print("Checking Telegram...")
-    url = f"https://api.telegram.org/bot{TOKEN}/getUpdates?offset=-1"
+    print("Checking Telegram...", flush=True)
+    url = f"https://api.telegram.org/bot{TOKEN}/getUpdates?limit=1&offset=-1"
     res = requests.get(url).json()
     
     if not res.get("ok") or not res.get("result"):
+        print("No new messages found.", flush=True)
         return
 
-    last_update = res["result"][0]
+    last_update = res["result"][-1]
     
     if "message" in last_update and "text" in last_update["message"]:
         if str(last_update["message"]["chat"]["id"]) != str(CHAT_ID):
+            print("Unauthorized Chat ID.", flush=True)
             return
             
         text = last_update["message"]["text"].strip()
-        print(f"Message received: {text}")
+        print(f"Message received: {text}", flush=True)
+        
+        # مسح الرسالة لكي لا يتم تنفيذها مرة أخرى في التشغيل القادم
+        update_id = last_update["update_id"]
+        requests.get(f"https://api.telegram.org/bot{TOKEN}/getUpdates?offset={update_id + 1}")
         
         if text == "/audit":
             send_msg("🚀 Deploying the Fleet...")
             if trigger_workflow("run-batch.yml"):
                 send_msg("✅ Fleet deployed!")
+            else:
+                send_msg("❌ Failed to deploy. Check GH_PAT.")
                 
         elif text == "/status":
             send_msg("🟢 Bot is online.\nCommands:\n/audit\n/build [idea]")
@@ -55,8 +61,11 @@ def main():
                 return
             send_msg(f"🏭 Building tool: {idea}...")
             if trigger_workflow("build-tool.yml", {"idea": idea}):
-                send_msg("✅ Construction started! Check GitHub for the result.")
+                send_msg("✅ Construction started! Check GitHub.")
             else:
-                send_msg("❌ Failed to trigger build. Check GitHub Actions logs.")
+                send_msg("❌ Failed to trigger build. (Check PAT workflow permission)")
         else:
-            print("Unknown command. Ignoring.")
+            print("Unknown command.", flush=True)
+
+if __name__ == "__main__":
+    main()
