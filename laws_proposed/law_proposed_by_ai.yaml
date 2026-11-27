@@ -1,0 +1,16 @@
+id: law_014_no_hardcoded_secrets
+name: Prohibit Hardcoded Secrets
+trigger: push
+scope: '**/*.{py,js,env,sh}'
+check_logic: |
+  Scan all files matching the scope for patterns that resemble hardcoded credentials, such as:
+    - AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY
+    - SECRET_KEY, JWT_SECRET, API_KEY
+    - password=..., passwd=..., pwd=...
+    - strings that look like Base64, hex, or UUID tokens longer than 20 characters
+  Use regular expressions to locate these patterns, then output each finding with:
+    - file path
+    - line number
+    - the exact matched string (redacted partially for privacy)
+  If any matches are detected, the check fails.
+severity: error
