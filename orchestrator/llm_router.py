@@ -1,32 +1,35 @@
 import os
-from scalexi_llm import LLMProxy
-
-# تهيئة الوكيل الموحد
-llm = LLMProxy()
+from litellm import completion
 
 def call_llm(system_prompt, user_prompt, json_mode=False, model_name="groq/llama-3.3-70b-versatile"):
-    """
-    دالة موحدة لاستدعاء أي نموذج من أي مزود.
-    يمكنك تغيير model_name إلى:
-    - "deepseek/deepseek-chat"
-    - "google/gemini-1.5-flash"
-    - "xai/grok-beta"
-    - "groq/llama-3.3-70b-versatile"
-    """
     try:
-        print(f"Routing to: {model_name}")
-        response, exec_time, token_usage, cost = llm.ask_llm(
-            model_name=model_name,
-            system_prompt=system_prompt,
-            user_prompt=user_prompt,
-            structured_output=json_mode # تفعيل JSON mode إذا لزم الأمر
+        messages = [
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": user_prompt}
+        ]
+        
+        kwargs = {}
+        if json_mode:
+            kwargs["response_format"] = {"type": "json_object"}
+            
+        print(f"Calling {model_name}...")
+        response = completion(
+            model=model_name,
+            messages=messages,
+            **kwargs
         )
         
-        # تنظيف المخرجات إذا كانت JSON
+        content = response.choices[0].message.content
         if json_mode:
-            response = response.replace("```json", "").replace("```", "").strip()
+            content = content.replace("```json", "").replace("```", "").strip()
             
-        return response, model_name
+        return content, model_name
     except Exception as e:
-        print(f"ScaleXI LLM failed: {e}")
+        print(f"LLM failed for {model_name}: {e}")
+        
+        # خطة الطوارئ: إذا فشل Groq، انتقل فوراً إلى Gemini
+        if "groq" in model_name:
+            print("Falling back to Gemini...")
+            return call_llm(system_prompt, user_prompt, json_mode, "gemini/gemini-1.5-flash")
+            
         return None, "Failed"
