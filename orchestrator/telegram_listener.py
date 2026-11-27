@@ -18,21 +18,24 @@ def trigger_workflow(workflow_name):
 
 def main():
     print("Checking Telegram for commands...")
-    url = f"https://api.telegram.org/bot{TOKEN}/getUpdates"
+    # offset=-1 ensures we only get the absolute latest message
+    url = f"https://api.telegram.org/bot{TOKEN}/getUpdates?offset=-1"
     res = requests.get(url).json()
     
     if not res.get("ok") or not res.get("result"):
-        print("No new messages.")
+        print("No new messages found in Telegram API response.")
         return
 
-    # Get the absolute latest message only
-    last_update = res["result"][-1]
+    last_update = res["result"][0]
     
     if "message" in last_update and "text" in last_update["message"]:
-        if str(last_update["message"]["chat"]["id"]) != str(CHAT_ID):
+        msg_chat_id = str(last_update["message"]["chat"]["id"])
+        if msg_chat_id != str(CHAT_ID):
+            print(f"Unauthorized Chat ID: {msg_chat_id}")
             return
             
         text = last_update["message"]["text"].strip()
+        print(f"Message received: {text}")
         
         if text == "/audit":
             send_msg("🚀 Command received: Deploying the Fleet...")
@@ -44,3 +47,10 @@ def main():
         elif text == "/status":
             send_msg("🟢 Swarm Alert Bot is online and listening.")
             send_msg("Available commands:\n/audit - Run all agents\n/status - Check bot health")
+        else:
+            print(f"Unknown command: {text}. Ignoring.")
+    else:
+        print("Latest update does not contain a text message.")
+
+if __name__ == "__main__":
+    main()
