@@ -1,0 +1,42 @@
+name: Build Tool
+
+on:
+  workflow_dispatch:
+    inputs:
+      idea:
+        description: 'Tool Idea (e.g., glassmorphism generator)'
+        required: true
+        type: string
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run Factory Agent
+        env:
+          GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+        run: |
+          cd orchestrator
+          python factory_agent.py "${{ github.event.inputs.idea }}"
+
+      - name: Commit and Push
+        run: |
+          git config --global user.name 'Swarm Bot'
+          git config --global user.email 'bot@swarm.local'
+          git add .
+          git commit -m "🤖 Built new tool: ${{ github.event.inputs.idea }}"
+          git push
