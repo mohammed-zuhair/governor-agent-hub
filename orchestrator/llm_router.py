@@ -13,7 +13,7 @@ def call_llm(system_prompt, user_prompt, json_mode=False):
             kwargs["response_format"] = {"type": "json_object"}
         response = client.chat.completions.create(
             messages=[{"role": "system", "content": system_prompt}, {"role": "user", "content": user_prompt}],
-            model="llama-3.3-70b-versatile",
+            model="openai/gpt-oss-120b",
             **kwargs
         )
         return response.choices[0].message.content, "Groq"
@@ -24,9 +24,8 @@ def call_llm(system_prompt, user_prompt, json_mode=False):
     try:
         print("Attempting Gemini...", flush=True)
         genai.configure(api_key=os.environ.get("GEMINI_API_KEY"))
-        model = genai.GenerativeModel("gemini-1.5-flash")
+        model = genai.GenerativeModel("gemini-2.0-flash")
         
-        # إعدادات Gemini لإخراج JSON
         generation_config = genai.GenerationConfig(
             response_mime_type="application/json" if json_mode else "text/plain"
         )
