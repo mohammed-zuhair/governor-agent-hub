@@ -28,8 +28,7 @@ def main():
         file_content = f.read()
 
     print(f"Agent running Law: {law['name']}...")
-    result, provider = call_llm(law["check_logic"], f"File: {target_file}\nContent:\n{file_content}")
-
+    result, provider = call_llm(law["check_logic"], f"File: {target_file}\nContent:\n{file_content}", model_name="deepseek/deepseek-chat")
     # Save Result to state folder
     os.makedirs("../state/results", exist_ok=True)
     result_data = {"law": law['name'], "provider": provider, "result": result}
