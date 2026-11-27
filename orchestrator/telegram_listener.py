@@ -51,7 +51,14 @@ def main():
             else:
                 send_msg("❌ Failed to deploy. Check GH_PAT.")
                 
-        elif text == "/status":
+        elif text == "/evolve":
+            send_msg("🧬 Activating Legislator Agent to propose a new law...")
+            if trigger_workflow("evolve.yml"):
+                send_msg("✅ Evolution started! Check Pull Requests soon.")
+            else:
+                send_msg("❌ Failed to trigger evolution.")
+                
+elif text == "/status":
             send_msg("🟢 Bot is online.\nCommands:\n/audit\n/build [idea]")
             
         elif text.startswith("/build"):
