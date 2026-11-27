@@ -17,6 +17,10 @@ def trigger_workflow(workflow_name, inputs=None):
     if inputs:
         payload["inputs"] = inputs
     res = requests.post(url, headers=headers, json=payload)
+    # طباعة حالة الطلب في السجل لمعرفة الأخطاء
+    print(f"Triggering {workflow_name} - Status Code: {res.status_code}")
+    if res.status_code != 204:
+        print(f"Error: {res.text}")
     return res.status_code == 204
 
 def main():
@@ -34,7 +38,7 @@ def main():
             return
             
         text = last_update["message"]["text"].strip()
-        print(f"Message: {text}")
+        print(f"Message received: {text}")
         
         if text == "/audit":
             send_msg("🚀 Deploying the Fleet...")
@@ -44,13 +48,15 @@ def main():
         elif text == "/status":
             send_msg("🟢 Bot is online.\nCommands:\n/audit\n/build [idea]")
             
-        elif text.startswith("/build "):
-            idea = text.replace("/build ", "").strip()
+        elif text.startswith("/build"):
+            idea = text.replace("/build", "").strip()
             if not idea:
-                send_msg("❌ Please provide an idea. Example: /build color picker")
+                send_msg("❌ Please provide an idea. Example: /build calculator")
                 return
             send_msg(f"🏭 Building tool: {idea}...")
             if trigger_workflow("build-tool.yml", {"idea": idea}):
                 send_msg("✅ Construction started! Check GitHub for the result.")
             else:
-                send_msg("❌ Failed to trigger build.")
+                send_msg("❌ Failed to trigger build. Check GitHub Actions logs.")
+        else:
+            print("Unknown command. Ignoring.")
