@@ -63,4 +63,4 @@ jobs:
           git config --global user.email 'bot@swarm.local'
           git add state/
           git commit -m "🧠 Memory: Updated STATE.json with latest agent results" || exit 0
-          git push
+          git pull origin main --no-edit && git push
