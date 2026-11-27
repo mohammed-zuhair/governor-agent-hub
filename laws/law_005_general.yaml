@@ -1,0 +1,7 @@
+id: law_005
+name: "General Code Rule 005"
+trigger: "cron"
+scope: "**/*.py"
+check_logic: "You are a code reviewer. Read the Python code. Check for general best practices, readability, and basic security issues. Return ONLY JSON with 'is_valid' (boolean) and 'reason' (string)."
+severity: "info"
+enabled: true

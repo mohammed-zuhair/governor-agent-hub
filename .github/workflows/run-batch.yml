@@ -2,6 +2,8 @@ name: Run Batch Agents
 
 on:
   workflow_dispatch:
+  schedule:
+    - cron: '0 */6 * * *' # يعمل تلقائياً كل 6 ساعات
 
 jobs:
   run-agents:
@@ -12,6 +14,16 @@ jobs:
           - "law_001_json_syntax.yaml"
           - "law_002_yaml_syntax.yaml"
           - "law_003_markdown_length.yaml"
+          - "law_004_general.yaml"
+          - "law_005_general.yaml"
+          - "law_006_general.yaml"
+          - "law_007_general.yaml"
+          - "law_008_general.yaml"
+          - "law_009_general.yaml"
+          - "law_010_general.yaml"
+          - "law_011_general.yaml"
+          - "law_012_general.yaml"
+          - "law_013_general.yaml"
       fail-fast: false
 
     steps:
