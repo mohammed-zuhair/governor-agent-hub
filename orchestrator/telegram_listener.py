@@ -1,6 +1,5 @@
 import os
 import requests
-import sys
 
 TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN")
 CHAT_ID = os.environ.get("TELEGRAM_CHAT_ID")
@@ -40,7 +39,7 @@ def main():
         text = last_update["message"]["text"].strip()
         print(f"Message received: {text}", flush=True)
         
-        # مسح الرسالة لكي لا يتم تنفيذها مرة أخرى في التشغيل القادم
+        # مسح الرسالة من ذاكرة البوت
         update_id = last_update["update_id"]
         requests.get(f"https://api.telegram.org/bot{TOKEN}/getUpdates?offset={update_id + 1}")
         
@@ -58,8 +57,8 @@ def main():
             else:
                 send_msg("❌ Failed to trigger evolution.")
                 
-elif text == "/status":
-            send_msg("🟢 Bot is online.\nCommands:\n/audit\n/build [idea]")
+        elif text == "/status":
+            send_msg("🟢 Bot is online.\nCommands:\n/audit\n/evolve\n/build [idea]")
             
         elif text.startswith("/build"):
             idea = text.replace("/build", "").strip()
