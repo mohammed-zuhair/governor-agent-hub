@@ -2,6 +2,7 @@ import os
 import sys
 import yaml
 import json
+import glob
 import requests
 from llm_router import call_llm
 
@@ -19,17 +20,27 @@ def main():
     with open(law_path, "r", encoding="utf-8") as f:
         law = yaml.safe_load(f)
 
-    if "json" in law["scope"]: target_file = "../state/STATE.json"
-    elif "yaml" in law["scope"]: target_file = f"../laws/{law_filename}"
-    elif "md" in law["scope"]: target_file = "../README.md"
-    else: target_file = "../README.md"
+    # اختيار الملف المستهدف بناءً على النطاق (Scope) بشكل ذكي
+    scope = law.get("scope", "")
+    if "json" in scope: 
+        target_file = "../state/STATE.json"
+    elif "yaml" in scope: 
+        target_file = f"../laws/{law_filename}"
+    elif "md" in scope: 
+        target_file = "../README.md"
+    elif "py" in scope:
+        py_files = glob.glob("../orchestrator/*.py")
+        target_file = py_files[0] if py_files else "../README.md"
+    else: 
+        target_file = "../README.md"
 
     with open(target_file, "r", encoding="utf-8") as f:
         file_content = f.read()
 
-    print(f"Agent running Law: {law['name']}...")
-    result, provider = call_llm(law["check_logic"], f"File: {target_file}\nContent:\n{file_content}", model_name="deepseek/deepseek-chat")
-    # Save Result to state folder
+    print(f"Agent running Law: {law['name']} on {target_file}...")
+    result, provider = call_llm(law["check_logic"], f"File: {target_file}\nContent:\n{file_content}", json_mode=True)
+
+    # حفظ النتيجة في مجلد state
     os.makedirs("../state/results", exist_ok=True)
     result_data = {"law": law['name'], "provider": provider, "result": result}
     

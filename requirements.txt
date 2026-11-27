@@ -1,4 +1,5 @@
-litellm
+groq
 pyyaml
 pydantic
 requests
+google-generativeai
