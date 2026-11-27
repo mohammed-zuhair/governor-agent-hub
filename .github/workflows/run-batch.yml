@@ -3,7 +3,7 @@ name: Run Batch Agents
 on:
   workflow_dispatch:
   schedule:
-    - cron: '0 */6 * * *' # يعمل تلقائياً كل 6 ساعات
+    - cron: '0 */6 * * *'
 
 jobs:
   run-agents:
@@ -25,19 +25,12 @@ jobs:
           - "law_012_general.yaml"
           - "law_013_general.yaml"
       fail-fast: false
-
     steps:
-      - name: Checkout Repository
-        uses: actions/checkout@v4
-
-      - name: Set up Python
-        uses: actions/setup-python@v5
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-
-      - name: Install dependencies
-        run: pip install -r requirements.txt
-
+      - run: pip install -r requirements.txt
       - name: Run Agent (${{ matrix.law_file }})
         env:
           GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
@@ -47,3 +40,25 @@ jobs:
         run: |
           cd orchestrator
           python agent_runner.py ${{ matrix.law_file }}
+
+  update-state:
+    needs: run-agents
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Aggregate State
+        run: |
+          cd orchestrator
+          python aggregator.py
+      - name: Commit and Push State
+        run: |
+          git config --global user.name 'Swarm Bot'
+          git config --global user.email 'bot@swarm.local'
+          git add ../state/STATE.json ../state/results/
+          git commit -m "🧠 Memory: Updated STATE.json with latest agent results" || exit 0
+          git push
